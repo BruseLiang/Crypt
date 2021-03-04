@@ -1,2 +1,2 @@
-AESCipher
-	support AES core, and CFB, OFB, CBC, ECB
+AES加解密软算法（C语言）
+	支持 CFB, OFB, CBC, ECB 模式
