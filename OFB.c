@@ -1,13 +1,16 @@
 /*
 */
 
-
 #include "AES.h"
-#include <cstdio>
-#include <cstring>
-#include <cassert>
-
-AES::AES(unsigned char* key)
+#include <string.h>
+#include <assert.h>
+AESMode_t	  m_mode;
+unsigned char m_key[16];
+unsigned char m_iv[16];
+unsigned char Sbox[256];
+unsigned char InvSbox[256];
+unsigned char w[11][4][4];
+void AES(unsigned char* key)
 {
 	unsigned char sBox[] =
 	{ /*  0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f */ 
@@ -50,20 +53,15 @@ AES::AES(unsigned char* key)
 	memcpy(Sbox, sBox, 256);
 	memcpy(InvSbox, invsBox, 256);
 	if (key != NULL) {
-		KeyExpansion(key, w);
+		AES_KeyExpansion(key, w);
 	}
 }
 
-AES::~AES()
-{
-
+void AES_SetKey (unsigned char *key) {
+	AES_KeyExpansion(key, w);
 }
 
-void AES::SetKey (unsigned char *key) {
-	KeyExpansion(key, w);
-}
-
-unsigned char* AES::Cipher(unsigned char* input, unsigned char *output)
+unsigned char* AES_Cipher(unsigned char* input, unsigned char *output)
 {
 	unsigned char state[4][4];
 	int i,r,c;
@@ -76,14 +74,14 @@ unsigned char* AES::Cipher(unsigned char* input, unsigned char *output)
 		}
 	}
 
-	AddRoundKey(state,w[0]);
+	AES_AddRoundKey(state,w[0]);
 
 	for(i=1; i<=10; i++)
 	{
-		SubBytes(state);
-		ShiftRows(state);
-		if(i!=10)MixColumns(state);
-		AddRoundKey(state,w[i]);
+		AES_SubBytes(state);
+		AES_ShiftRows(state);
+		if(i!=10)AES_MixColumns(state);
+		AES_AddRoundKey(state,w[i]);
 	}
 
 	for(r=0; r<4; r++)
@@ -97,7 +95,7 @@ unsigned char* AES::Cipher(unsigned char* input, unsigned char *output)
 	return output;
 }
 
-unsigned char* AES::InvCipher(unsigned char* input, unsigned char *output)
+unsigned char* AES_InvCipher(unsigned char* input, unsigned char *output)
 {
 	unsigned char state[4][4];
 	int i,r,c;
@@ -110,15 +108,15 @@ unsigned char* AES::InvCipher(unsigned char* input, unsigned char *output)
 		}
 	}
 
-	AddRoundKey(state, w[10]);
+	AES_AddRoundKey(state, w[10]);
 	for(i=9; i>=0; i--)
 	{
-		InvShiftRows(state);
-		InvSubBytes(state);
-		AddRoundKey(state, w[i]);
+		AES_InvShiftRows(state);
+		AES_InvSubBytes(state);
+		AES_AddRoundKey(state, w[i]);
 		if(i)
 		{
-			InvMixColumns(state);
+			AES_InvMixColumns(state);
 		}
 	}
 	
@@ -131,7 +129,7 @@ unsigned char* AES::InvCipher(unsigned char* input, unsigned char *output)
 	}
 	return output;
 }
-
+/*
 void* AES::Cipher(void* input,  void *output, int length)
 {
 	unsigned char* in = (unsigned char*) input;
@@ -160,8 +158,8 @@ void* AES::InvCipher(void* input, void* output, int length)
 	}
 	return output;
 }
-
-void AES::KeyExpansion(unsigned char* key, unsigned char w[][4][4])
+*/
+void AES_KeyExpansion(unsigned char* key, unsigned char w[][4][4])
 {
 	int i,j,r,c;
 	unsigned char rc[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36};
@@ -199,7 +197,7 @@ void AES::KeyExpansion(unsigned char* key, unsigned char w[][4][4])
 	}
 }
 
-unsigned char AES::FFmul(unsigned char a, unsigned char b)
+unsigned char AES_FFmul(unsigned char a, unsigned char b)
 {
 	unsigned char bw[4];
 	unsigned char res=0;
@@ -223,7 +221,7 @@ unsigned char AES::FFmul(unsigned char a, unsigned char b)
 	return res;
 }
 
-void AES::SubBytes(unsigned char state[][4])
+void AES_SubBytes(unsigned char state[][4])
 {
 	int r,c;
 	for(r=0; r<4; r++)
@@ -235,7 +233,7 @@ void AES::SubBytes(unsigned char state[][4])
 	}
 }
 
-void AES::ShiftRows(unsigned char state[][4])
+void AES_ShiftRows(unsigned char state[][4])
 {
 	unsigned char t[4];
 	int r,c;
@@ -252,7 +250,7 @@ void AES::ShiftRows(unsigned char state[][4])
 	}
 }
 
-void AES::MixColumns(unsigned char state[][4])
+void AES_MixColumns(unsigned char state[][4])
 {
 	unsigned char t[4];
 	int r,c;
@@ -264,15 +262,15 @@ void AES::MixColumns(unsigned char state[][4])
 		}
 		for(r=0; r<4; r++)
 		{
-			state[r][c] = FFmul(0x02, t[r])
-						^ FFmul(0x03, t[(r+1)%4])
-						^ FFmul(0x01, t[(r+2)%4])
-						^ FFmul(0x01, t[(r+3)%4]);
+			state[r][c] = AES_FFmul(0x02, t[r])
+						^ AES_FFmul(0x03, t[(r+1)%4])
+						^ AES_FFmul(0x01, t[(r+2)%4])
+						^ AES_FFmul(0x01, t[(r+3)%4]);
 		}
 	}
 }
 
-void AES::AddRoundKey(unsigned char state[][4], unsigned char k[][4])
+void AES_AddRoundKey(unsigned char state[][4], unsigned char k[][4])
 {
 	int r,c;
 	for(c=0; c<4; c++)
@@ -284,7 +282,7 @@ void AES::AddRoundKey(unsigned char state[][4], unsigned char k[][4])
 	}
 }
 
-void AES::InvSubBytes(unsigned char state[][4])
+void AES_InvSubBytes(unsigned char state[][4])
 {
 	int r,c;
 	for(r=0; r<4; r++)
@@ -296,7 +294,7 @@ void AES::InvSubBytes(unsigned char state[][4])
 	}
 }
 
-void AES::InvShiftRows(unsigned char state[][4])
+void AES_InvShiftRows(unsigned char state[][4])
 {
 	unsigned char t[4];
 	int r,c;
@@ -313,7 +311,7 @@ void AES::InvShiftRows(unsigned char state[][4])
 	}
 }
 
-void AES::InvMixColumns(unsigned char state[][4])
+void AES_InvMixColumns(unsigned char state[][4])
 {
 	unsigned char t[4];
 	int r,c;
@@ -325,10 +323,10 @@ void AES::InvMixColumns(unsigned char state[][4])
 		}
 		for(r=0; r<4; r++)
 		{
-			state[r][c] = FFmul(0x0e, t[r])
-						^ FFmul(0x0b, t[(r+1)%4])
-						^ FFmul(0x0d, t[(r+2)%4])
-						^ FFmul(0x09, t[(r+3)%4]);
+			state[r][c] = AES_FFmul(0x0e, t[r])
+						^ AES_FFmul(0x0b, t[(r+1)%4])
+						^ AES_FFmul(0x0d, t[(r+2)%4])
+						^ AES_FFmul(0x09, t[(r+3)%4]);
 		}
 	}
 }
@@ -336,35 +334,32 @@ void AES::InvMixColumns(unsigned char state[][4])
 /**************************************************************/
 //AESModeOfOperation
 
-AESModeOfOperation::AESModeOfOperation() {
+void AESModeOfOperation() {
 	m_mode = MODE_ECB;
-	m_aes = NULL;
 	memset(m_key, 0, 16);
 	memset(m_iv, 0, 16);
-	m_aes = new AES(m_key);
-	assert(m_aes != NULL);
+	AES(m_key);
+	//assert(m_aes != NULL);
 }
 
-AESModeOfOperation::~AESModeOfOperation() {
-	delete m_aes;
-}
-
-void AESModeOfOperation::set_mode(AESMode_t _mode) {
+void AESModeOfOperation_set_mode(AESMode_t _mode) {
 	m_mode = _mode;
 }
 
-void AESModeOfOperation::set_key(unsigned char *_key) {
+void AESModeOfOperation_set_key(unsigned char *_key) {
 	assert(_key != NULL);
 	memcpy(m_key, _key, 16);
-	m_aes->SetKey(m_key);
+	AES_SetKey(m_key);
 }
-void AESModeOfOperation::set_iv(unsigned char *_iv) {
+void AESModeOfOperation_set_iv(unsigned char *_iv) {
 	assert(_iv != NULL);
 	memcpy(m_iv, _iv, 16);
 }
 
-int AESModeOfOperation::Encrypt(unsigned char *_in, int _length, unsigned char *_out) {
-	bool first_round = true;
+int AESModeOfOperation_Encrypt(unsigned char *_in, int _length, unsigned char *_out) {
+	int true = 1;
+	int false = 0;
+	int first_round = true;
 	int rounds = 0;
 	int start = 0;
 	int end = 0;
@@ -391,10 +386,10 @@ int AESModeOfOperation::Encrypt(unsigned char *_in, int _length, unsigned char *
 		// 4. handle all modes
 		if (m_mode == MODE_CFB) {
 			if (first_round == true) {
-				m_aes->Cipher(m_iv, output);
+				AES_Cipher(m_iv, output);
 				first_round = false;
 			} else {
-				m_aes->Cipher(input,output);
+				AES_Cipher(input,output);
 			}
 			for (int i = 0; i < 16; ++i) {
 				if ( (end - start) - 1 < i) {
@@ -410,10 +405,10 @@ int AESModeOfOperation::Encrypt(unsigned char *_in, int _length, unsigned char *
 			memcpy(input,ciphertext, 16);
 		} else if (m_mode == MODE_OFB) {			// MODE_OFB
 			if (first_round == true) {
-				m_aes->Cipher(m_iv,output); // 
+				AES_Cipher(m_iv,output); // 
 				first_round = false;
 			} else {
-				m_aes->Cipher(input, output);
+				AES_Cipher(input, output);
 			}
 			// ciphertext = plaintext ^ output
 			for (int i = 0; i < 16; ++i) {
@@ -447,7 +442,7 @@ int AESModeOfOperation::Encrypt(unsigned char *_in, int _length, unsigned char *
 //			printf("^^^^^^^^^^^^\n");
 //			print(input, 16);
 //			printf("^^^^^^^^^^^^\n");
-			m_aes->Cipher(input, ciphertext);
+			AES_Cipher(input, ciphertext);
 			printf("****ciphertext****");
 			print(ciphertext, 16);
 			printf("************\n");
@@ -464,9 +459,11 @@ int AESModeOfOperation::Encrypt(unsigned char *_in, int _length, unsigned char *
 	return co_index;
 }
 
-int AESModeOfOperation::Decrypt(unsigned char *_in, int _length, unsigned char *_out) {
+int AESModeOfOperation_Decrypt(unsigned char *_in, int _length, unsigned char *_out) {
 	// TODO :
-	bool first_round = true;
+	int true = 1;
+	int false = 0;
+	int first_round = true;
 	int rounds = 0;
 	unsigned char ciphertext[16] = {0};
 	unsigned char input[16] = {0};
@@ -493,10 +490,10 @@ int AESModeOfOperation::Decrypt(unsigned char *_in, int _length, unsigned char *
 		memcpy(ciphertext, _in + start, end - start);
 		if ( m_mode == MODE_CFB ) {
 			if (first_round = true) {
-				m_aes->Cipher(m_iv, output);
+				AES_Cipher(m_iv, output);
 				first_round = false;
 			} else {
-				m_aes->Cipher(input, output);
+				AES_Cipher(input, output);
 			}
 			for (int i = 0; i < 16; i++) {
 				if ( end - start - 1 < i) {
@@ -512,10 +509,10 @@ int AESModeOfOperation::Decrypt(unsigned char *_in, int _length, unsigned char *
 			memcpy(input, ciphertext, 16);
 		} else if (m_mode == MODE_OFB) {
 			if (first_round == true) {
-				m_aes->Cipher(m_iv, output);
+				AES_Cipher(m_iv, output);
 				first_round = false;
 			} else {
-				m_aes->Cipher(input, output);
+				AES_Cipher(input, output);
 			}
 			for (int i = 0; i < 16; i++) {
 				if ( end - start -1 < i) {
@@ -533,7 +530,7 @@ int AESModeOfOperation::Decrypt(unsigned char *_in, int _length, unsigned char *
 			printf("------ciphertext------");
 			print(ciphertext, 16);
 			printf("----------------------\n");
-			m_aes->InvCipher(ciphertext, output);
+			AES_InvCipher(ciphertext, output);
 			printf("------output------");
 			print(output, 16);
 			printf("----------------------\n");
