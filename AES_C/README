@@ -1,2 +1,3 @@
 AES加解密软算法（C语言）
 	支持 CFB, OFB, CBC, ECB 模式
+其中：AES.c 中为算法的实现代码;Test.c为测试程序
